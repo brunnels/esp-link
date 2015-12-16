@@ -27,8 +27,8 @@
 * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 * POSSIBILITY OF SUCH DAMAGE.
 */
-#ifndef MQTT_H_
-#define MQTT_H_
+#ifndef _MQTT_H_
+#define _MQTT_H_
 
 #include "mqtt_msg.h"
 #include "pktbuf.h"
@@ -131,4 +131,4 @@ void MQTT_OnPublished(MQTT_Client* mqttClient, MqttCallback publishedCb);
 // Callback when data arrives for subscription
 void MQTT_OnData(MQTT_Client* mqttClient, MqttDataCallback dataCb);
 
-#endif /* USER_AT_MQTT_H_ */
+#endif // _MQTT_H_

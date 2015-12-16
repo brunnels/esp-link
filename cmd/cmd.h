@@ -12,6 +12,8 @@
 #define SLIP_REPL   0x7D
 #define SLIP_ESC(x) (x ^ 0x20)
 
+extern uint32_t	realtime_stamp;
+
 #if 0
 // Proper SLIP escape chars from RFC
 #define SLIP_END      0300    // indicates end of packet
@@ -40,23 +42,25 @@ typedef struct {
 } CmdRequest;
 
 typedef enum {
-  CMD_NULL = 0,
-  CMD_RESET,          // reset esp (not honored in this implementation)
-  CMD_IS_READY,       // health-check
-  CMD_WIFI_CONNECT,   // (3) connect to AP (not honored in this implementation)
-  CMD_MQTT_SETUP,
-  CMD_MQTT_CONNECT,
-  CMD_MQTT_DISCONNECT,
+  CMD_IS_READY = 0,  
+  CMD_CLEAR_CBS,
+  CMD_CB_ADD,
+  CMD_CB_EVENTS,
+  CMD_WIFI_INIT,
+  CMD_GET_TIME,
+  CMD_GET_INFO,
+
+  CMD_MQTT_INIT,
   CMD_MQTT_PUBLISH,
   CMD_MQTT_SUBSCRIBE,
   CMD_MQTT_LWT,
   CMD_MQTT_EVENTS,
-  CMD_REST_SETUP,     // (11)
+
+  CMD_REST_SETUP,
   CMD_REST_REQUEST,
   CMD_REST_SETHEADER,
-  CMD_REST_EVENTS,
-  CMD_CB_ADD,         // 15
-  CMD_CB_EVENTS
+  CMD_REST_EVENTS
+  
 } CmdName;
 
 typedef uint32_t (*cmdfunc_t)(CmdPacket *cmd);

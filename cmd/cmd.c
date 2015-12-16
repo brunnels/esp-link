@@ -14,7 +14,7 @@ static const char *cmd_names[] = {
   "MQTT_SETUP", "MQTT_CONNECT", "MQTT_DISCONNECT",
   "MQTT_PUBLISH", "MQTT_SUBSCRIBE", "MQTT_LWT", "MQTT_EVENTS",
   "REST_SETUP", "REST_REQUEST", "REST_SETHEADER", "REST_EVENTS",
-  "CB_ADD", "CB_EVENTS",
+  "CB_ADD", "CB_EVENTS", "GET_TIME",
 };
 #else
 #define DBG(format, ...) do { } while(0)
