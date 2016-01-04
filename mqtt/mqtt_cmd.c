@@ -13,6 +13,8 @@
 #define DBG(format, ...) do { } while(0)
 #endif
 
+#define MQTT_CB 0xf00df00d
+
 // callbacks to the attached uC
 uint32_t connectedCb = 0, disconnectCb = 0, publishedCb = 0, dataCb = 0;
 
@@ -192,6 +194,9 @@ uint32_t ICACHE_FLASH_ATTR MQTTCMD_Init(CmdPacket *cmd) {
   CmdRequest req;
   CMD_Request(&req, cmd);
 
+  if (CMD_GetArgc(&req) != 4)
+    return 0;
+
   // create callback
   MqttCmdCb* callback = (MqttCmdCb*)os_zalloc(sizeof(MqttCmdCb));
   uint32_t cb_data;
@@ -211,7 +216,7 @@ uint32_t ICACHE_FLASH_ATTR MQTTCMD_Init(CmdPacket *cmd) {
   mqttClient.cmdPublishedCb = cmdMqttPublishedCb;
   mqttClient.cmdDataCb = cmdMqttDataCb;
 
-  return (uint32_t)&mqttClient;
+  return MQTT_CB; //(uint32_t)&mqttClient;
 }
 
 

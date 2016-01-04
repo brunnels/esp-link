@@ -49,8 +49,7 @@
 
 extern void dumpMem(void *buf, int len);
 
-// This is to prevent adding ssl libs
-// TODO: add some ifdefs so SSL could be used if desired
+#ifndef CLIENT_SSL_ENABLE
 sint8 espconn_secure_connect(struct espconn *espconn) {
   return espconn_connect(espconn);
 }
@@ -62,6 +61,7 @@ sint8 espconn_secure_disconnect(struct espconn *espconn) {
 sint8 espconn_secure_sent(struct espconn *espconn, uint8 *psent, uint16 length) {
   return espconn_sent(espconn, psent, length);
 }
+#endif
 
 // max message size supported for receive
 #define MQTT_MAX_RCV_MESSAGE 2048

@@ -1,12 +1,5 @@
-/*
- * api.h
- *
- *  Created on: Mar 4, 2015
- *      Author: Minh
- */
-
-#ifndef MODULES_API_H_
-#define MODULES_API_H_
+#ifndef _REST_H_
+#define _REST_H_
 
 #include "c_types.h"
 #include "ip_addr.h"
@@ -37,4 +30,4 @@ uint32_t REST_Setup(CmdPacket *cmd);
 uint32_t REST_Request(CmdPacket *cmd);
 uint32_t REST_SetHeader(CmdPacket *cmd);
 
-#endif /* MODULES_INCLUDE_API_H_ */
+#endif // _REST_H_

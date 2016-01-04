@@ -12,7 +12,6 @@
 #define DBG_REST(format, ...) do { } while(0)
 #endif
 
-
 // Connection pool for REST clients. Attached MCU's just call REST_setup and this allocates
 // a connection, They never call any 'free' and given that the attached MCU could restart at
 // any time, we cannot really rely on the attached MCU to call 'free' ever, so better do without.
@@ -23,10 +22,24 @@ static RestClient restClient[MAX_REST];
 static uint8_t restNum = 0xff; // index into restClient for next slot to allocate
 #define REST_CB 0xbeef0000 // fudge added to callback for arduino so we can detect problems
 
+// This is to prevent adding ssl libs
+#ifndef CLIENT_SSL_ENABLE
+sint8 espconn_secure_connect(struct espconn *espconn) {
+  return espconn_connect(espconn);
+}
+
+sint8 espconn_secure_disconnect(struct espconn *espconn) {
+  return espconn_disconnect(espconn);
+}
+
+sint8 espconn_secure_sent(struct espconn *espconn, uint8 *psent, uint16 length) {
+  return espconn_sent(espconn, psent, length);
+}
+#endif
+
 // Receive HTTP response - this hacky function assumes that the full response is received in
 // one go. Sigh...
-static void ICACHE_FLASH_ATTR
-tcpclient_recv(void *arg, char *pdata, unsigned short len) {
+static void ICACHE_FLASH_ATTR tcpclient_recv(void *arg, char *pdata, unsigned short len) {
   struct espconn *pCon = (struct espconn*)arg;
   RestClient *client = (RestClient *)pCon->reverse;
 
@@ -74,7 +87,8 @@ tcpclient_recv(void *arg, char *pdata, unsigned short len) {
   DBG_REST("REST: status=%ld, body=%d\n", code, body_len);
   if (pi == len) {
     crc = CMD_ResponseStart(CMD_REST_EVENTS, client->resp_cb, code, 0);
-  } else {
+  } 
+  else {
     crc = CMD_ResponseStart(CMD_REST_EVENTS, client->resp_cb, code, 1);
     crc = CMD_ResponseBody(crc, (uint8_t*)(pdata+pi), body_len);
     CMD_ResponseEnd(crc);
@@ -85,15 +99,16 @@ tcpclient_recv(void *arg, char *pdata, unsigned short len) {
 #endif
   }
 
-  //if(client->security)
-  //  espconn_secure_disconnect(client->pCon);
-  //else
+  if (client->security) {
+    espconn_secure_disconnect(client->pCon);
+  }
+  else {
     espconn_disconnect(client->pCon);
+  }
 
 }
 
-static void ICACHE_FLASH_ATTR
-tcpclient_sent_cb(void *arg) {
+static void ICACHE_FLASH_ATTR tcpclient_sent_cb(void *arg) {
   struct espconn *pCon = (struct espconn *)arg;
   RestClient* client = (RestClient *)pCon->reverse;
   DBG_REST("REST: Sent\n");
@@ -102,15 +117,15 @@ tcpclient_sent_cb(void *arg) {
     espconn_sent(client->pCon, (uint8_t*)(client->data+client->data_sent),
           client->data_len-client->data_sent);
     client->data_sent = client->data_len;
-  } else {
+  } 
+  else {
     // we're done sending, free the memory
     if (client->data) os_free(client->data);
     client->data = 0;
   }
 }
 
-static void ICACHE_FLASH_ATTR
-tcpclient_discon_cb(void *arg) {
+static void ICACHE_FLASH_ATTR tcpclient_discon_cb(void *arg) {
   struct espconn *pespconn = (struct espconn *)arg;
   RestClient* client = (RestClient *)pespconn->reverse;
   // free the data buffer, if we have one
@@ -118,8 +133,7 @@ tcpclient_discon_cb(void *arg) {
   client->data = 0;
 }
 
-static void ICACHE_FLASH_ATTR
-tcpclient_recon_cb(void *arg, sint8 errType) {
+static void ICACHE_FLASH_ATTR tcpclient_recon_cb(void *arg, sint8 errType) {
   struct espconn *pCon = (struct espconn *)arg;
   RestClient* client = (RestClient *)pCon->reverse;
   os_printf("REST #%d: conn reset, err=%d\n", client-restClient, errType);
@@ -128,8 +142,7 @@ tcpclient_recon_cb(void *arg, sint8 errType) {
   client->data = 0;
 }
 
-static void ICACHE_FLASH_ATTR
-tcpclient_connect_cb(void *arg) {
+static void ICACHE_FLASH_ATTR tcpclient_connect_cb(void *arg) {
   struct espconn *pCon = (struct espconn *)arg;
   RestClient* client = (RestClient *)pCon->reverse;
   DBG_REST("REST #%d: connected\n", client-restClient);
@@ -139,16 +152,15 @@ tcpclient_connect_cb(void *arg) {
 
   client->data_sent = client->data_len <= 1400 ? client->data_len : 1400;
   DBG_REST("REST #%d: sending %d\n", client-restClient, client->data_sent);
-  //if(client->security){
-  //  espconn_secure_sent(client->pCon, client->data, client->data_sent);
-  //}
-  //else{
+  if(client->security){
+    espconn_secure_sent(client->pCon, client->data, client->data_sent);
+  }
+  else{
     espconn_sent(client->pCon, (uint8_t*)client->data, client->data_sent);
-  //}
+  }
 }
 
-static void ICACHE_FLASH_ATTR
-rest_dns_found(const char *name, ip_addr_t *ipaddr, void *arg) {
+static void ICACHE_FLASH_ATTR rest_dns_found(const char *name, ip_addr_t *ipaddr, void *arg) {
   struct espconn *pConn = (struct espconn *)arg;
   RestClient* client = (RestClient *)pConn->reverse;
 
@@ -163,18 +175,18 @@ rest_dns_found(const char *name, ip_addr_t *ipaddr, void *arg) {
       *((uint8 *) &ipaddr->addr + 3));
   if(client->ip.addr == 0 && ipaddr->addr != 0) {
     os_memcpy(client->pCon->proto.tcp->remote_ip, &ipaddr->addr, 4);
-#ifdef CLIENT_SSL_ENABLE
+
     if(client->security) {
       espconn_secure_connect(client->pCon);
-    } else
-#endif
-    espconn_connect(client->pCon);
+    } 
+    else {
+      espconn_connect(client->pCon);
+    }
     DBG_REST("REST: connecting...\n");
   }
 }
 
-uint32_t ICACHE_FLASH_ATTR
-REST_Setup(CmdPacket *cmd) {
+uint32_t ICACHE_FLASH_ATTR REST_Init(CmdPacket *cmd) {
   CmdRequest req;
   uint32_t port, security;
 
@@ -381,12 +393,12 @@ REST_Request(CmdPacket *cmd) {
 
   if(UTILS_StrToIP((char *)client->host, &client->pCon->proto.tcp->remote_ip)) {
     DBG_REST("REST: Connect to ip %s:%ld\n",client->host, client->port);
-    //if(client->security){
-    //  espconn_secure_connect(client->pCon);
-    //}
-    //else {
+    if(client->security){
+      espconn_secure_connect(client->pCon);
+    }
+    else {
       espconn_connect(client->pCon);
-    //}
+    }
   } else {
     DBG_REST("REST: Connect to host %s:%ld\n", client->host, client->port);
     espconn_gethostbyname(client->pCon, (char *)client->host, &client->ip, rest_dns_found);
